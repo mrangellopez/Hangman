@@ -1,0 +1,215 @@
+/*
+ * File: Hangman.java
+ * ------------------
+ * This program will eventually play the Hangman game from
+ * Assignment #4.
+ */
+
+import java.util.ArrayList;
+
+import acm.program.*;
+import acm.util.RandomGenerator;
+
+public class Hangman extends ConsoleProgram {
+
+	private int letterIndex;
+	private int nRounds;
+	private int roundNumber;
+	public int tries;
+	private HangmanLexicon lexicon;
+	private HangmanCanvas canvas;
+	private String fullWord;
+	public String partialWord;
+	private char charGuess;
+	
+	public static void main(String[] args) {
+		new Hangman().start(args);
+		}
+
+	/*
+	 * Sets up canvas window
+	 */
+	public void init() {
+		wordIndexTracker = new ArrayList<Integer>();
+		roundNumber = 0;
+		canvas = new HangmanCanvas();
+		add(canvas);
+	}
+
+	/*
+	 * Sets up the Hangman game with multiple rounds(words)
+	 */
+	public void run() {
+		println("Welcome to Hangman!");
+		lexicon = new HangmanLexicon();
+		rgen = new RandomGenerator();
+		nRounds = lexicon.getWordCount();
+		while (roundNumber < nRounds) {
+			int wordIndex = rgen.nextInt(0, lexicon.getWordCount());
+			while (wordIndexTracker.contains(wordIndex)) {
+				wordIndex = rgen.nextInt(0, lexicon.getWordCount());
+			}
+			wordIndexTracker.add(wordIndex);
+			canvas.removeAll();
+			fullWord = lexicon.getWord(wordIndex);
+			partialWord = addDashes(fullWord.length());
+			canvas.reset();
+			playRound();
+		}
+	}
+
+	/*
+	 * Sets up one round(one word) of the game
+	 */
+	private void playRound() {
+		for (tries = 0; tries < 8; tries++) {
+			nextTry();
+			if (wordComplete(partialWord)) {
+				winGame();
+				tries = 0;
+				break;
+			}
+		}
+		if (tries == 8) {
+			loseGame();
+		}
+	}
+
+	/*
+	 * Moves the user to their next try of the guessing a letter
+	 */
+	private void nextTry() {
+		println("The word now looks like this: " + partialWord);
+		if (tries < 7) {
+			println("You have " + (8 - tries) + " guesses left.");
+		} else if (tries == 7) {
+			println("You only have one guess left.");
+		}
+		if (tries < 8) {
+			canvas.displayWord(partialWord);
+			askForGuess();
+			processCharacter();
+		}
+	}
+
+	/*
+	 * prompts user for guess and converts to uppercase char
+	 */
+	private void askForGuess() {
+		String getGuess = "";
+		getGuess = readLine("Your guess: ");
+		while (getGuess.isEmpty()) {
+			getGuess = readLine("That was an incorrect entry. Please re-enter your guess: ");
+		}
+		charGuess = getGuess.charAt(0);
+		boolean charLetter = Character.isLetter(charGuess);
+		while (charLetter == false) {
+			println(charGuess + " is not a letter. Please try again.");
+			getGuess = readLine("Your guess: ");
+			charGuess = getGuess.charAt(0);
+			charLetter = Character.isLetter(charGuess);
+		}
+		charGuess = Character.toUpperCase(charGuess);
+	}
+
+	/*
+	 * Determines whether the guess is correct or incorrect
+	 */
+	private void processCharacter() {
+		letterIndex = fullWord.indexOf(charGuess);
+		if (letterIndex == -1) {
+			println("There are no " + charGuess + "'s in this word.");
+			canvas.noteIncorrectGuess(charGuess);
+		} else {
+			println("That guess is correct.");
+			addLetters();
+			tries--;
+		}
+	}
+
+	/*
+	 * Adds letters to the word if guess is correct
+	 */
+	private void addLetters() {
+		String firstHalf = partialWord.substring(0, letterIndex);
+		String secondHalf = partialWord.substring(letterIndex + 1);
+		partialWord = firstHalf + charGuess + secondHalf;
+		letterIndex += 1;
+		checkForMoreOccurrences();
+	}
+
+	/*
+	 * Checks to see if the letter guessed is used more than once
+	 */
+	private void checkForMoreOccurrences() {
+		if (letterIndex < fullWord.length()) {
+			letterIndex = fullWord.indexOf(charGuess, letterIndex);
+			if (letterIndex > -1) {
+				addLetters();
+			}
+		}
+	}
+
+	/*
+	 * Displays losing message
+	 */
+	private void loseGame() {
+		println("You're completely hung.");
+		println("The word was: " + fullWord);
+		println("You lose.");
+		canvas.displayWord(fullWord);
+		pause(5000);
+		nextRound();
+	}
+
+	/*
+	 * Displays winning message
+	 */
+	private void winGame() {
+		println("You guessed: " + fullWord);
+		println("You win.");
+		println("");
+		nextRound();
+	}
+
+	/*
+	 * Begins next round(next word) of game
+	 */
+	private void nextRound() {
+		roundNumber++;
+		if (roundNumber < nRounds) {
+			println("");
+			println("ROUND " + (roundNumber + 1) + "!");
+		} else {
+			canvas.removeAll();
+			println("");
+			println("You're out of words!");
+		}
+	}
+
+	/*
+	 * displays up initial dashes for the word being guessed
+	 */
+	private String addDashes(int nDashes) {
+		char dash = '-';
+		String dashes = "";
+		for (int i = 0; i < nDashes; i++) {
+			dashes += dash;
+		}
+		return dashes;
+	}
+
+	/*
+	 * Determines if the word being guessed has been completed by user
+	 */
+	private boolean wordComplete(String word) {
+		int index = word.indexOf('-');
+		if (index == -1) {
+			return true;
+		}
+		return false;
+	}
+
+	private ArrayList<Integer> wordIndexTracker;
+	private RandomGenerator rgen;
+}
